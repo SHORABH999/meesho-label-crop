@@ -1,0 +1,67 @@
+<script src="https://unpkg.com/pdf-lib@1.16.0/dist/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/downloadjs@1.4.7"></script>
+
+<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 20px auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+  <h2 style="color: #2874f0; text-align: center; margin-bottom: 20px;">Flipkart Labels Crop</h2>
+  <p style="text-align: center; color: #666; margin-bottom: 20px;">
+    
+  
+  <div style="margin-bottom: 20px;">
+    <input type="file" id="pdf-upload" accept=".pdf" style="width: 100%; padding: 10px; border: 1px solid #e0e0e0; border-radius: 4px;" />
+  </div>
+  
+  <button id="crop-btn" style="width: 100%; padding: 12px; background-color: #fb641b; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">
+    Crop PDF for Flipkart Labels
+  </button>
+  
+  <p id="error-message" style="color: #ff6161; margin-top: 15px; text-align: center;"></p>
+</div>
+
+<script>
+  document.getElementById('crop-btn').addEventListener('click', async () => {
+    const pdfFile = document.getElementById('pdf-upload').files[0];
+    const errorMessage = document.getElementById('error-message');
+    errorMessage.textContent = '';
+    
+    if (!pdfFile) {
+      errorMessage.textContent = 'Please select a PDF file first';
+      return;
+    }
+    
+    // Fixed margin values for Flipkart labels
+    const TOP_MARGIN = 20;    // 20 points
+    const BOTTOM_MARGIN = 450; // 450 points
+    const LEFT_MARGIN = 180;   // 180 points
+    const RIGHT_MARGIN = 180;  // 180 points
+    
+    try {
+      const arrayBuffer = await pdfFile.arrayBuffer();
+      const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+      const pages = pdfDoc.getPages();
+      
+      pages.forEach(page => {
+        const { width, height } = page.getSize();
+        
+        // Calculate new crop box with specified margins
+        const newX = LEFT_MARGIN;
+        const newY = BOTTOM_MARGIN;
+        const newWidth = width - LEFT_MARGIN - RIGHT_MARGIN;
+        const newHeight = height - TOP_MARGIN - BOTTOM_MARGIN;
+        
+        // Validate the crop area
+        if (newWidth <= 0 || newHeight <= 0) {
+          throw new Error(`Invalid margins for this PDF size. Resulting dimensions would be ${newWidth.toFixed(1)}×${newHeight.toFixed(1)} pts`);
+        }
+        
+        page.setCropBox(newX, newY, newWidth, newHeight);
+      });
+      
+      const croppedPdfBytes = await pdfDoc.save();
+      download(croppedPdfBytes, "flipkart_labels_cropped.pdf", "application/pdf");
+      
+    } catch (error) {
+      errorMessage.textContent = 'Error: ' + error.message;
+      console.error(error);
+    }
+  });
+</script>
